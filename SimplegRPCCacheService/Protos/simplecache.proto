@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option csharp_namespace = "SimplegRPCCacheService";
+
+package simplecache;
+
+service Cacher {
+	rpc GetKey (GetKeyRequest) returns (GetKeyResponse) {}
+	rpc SetKey (SetKeyRequest) returns (SetKeyResponse) {}
+	rpc ListKeys (ListKeyRequest) returns (ListKeyResponse) {}
+}
+
+message GetKeyRequest {
+	string key = 1;
+}
+
+message GetKeyResponse {
+	bytes key_value = 1;
+	optional bool not_found = 2;
+}
+
+message SetKeyRequest {
+	string key = 1;
+	bytes key_value = 2;
+	optional bool remove_key = 3;
+}
+
+message SetKeyResponse {
+	int32 set_key_result = 1;
+	optional string error_msg = 2;
+}
+
+message ListKeyRequest {
+	string key_filter = 1;
+}
+
+message ListKeyResponse {
+	repeated string keys = 1;
+}

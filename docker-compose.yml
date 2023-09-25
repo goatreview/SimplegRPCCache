@@ -1,0 +1,22 @@
+version: '3.4'
+
+services:
+  simplegrpccacheservice:
+    image: ${DOCKER_REGISTRY-}simplegrpccacheservice
+    build:
+      context: .
+      dockerfile: SimplegRPCCacheService/Dockerfile
+  simplegrpccacheclient1:
+    image: ${DOCKER_REGISTRY-}simplegrpccacheservice
+    build:
+      context: .
+      dockerfile: SimplegRPCCacheService/Dockerfile
+    depends_on:
+        - simplegrpccacheservice
+  simplegrpccacheclient2:
+    image: ${DOCKER_REGISTRY-}simplegrpccacheservice
+    build:
+      context: .
+      dockerfile: SimplegRPCCacheService/Dockerfile      
+    depends_on:
+        - simplegrpccacheservice
