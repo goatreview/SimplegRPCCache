@@ -74,7 +74,6 @@ namespace SimplegRPCCacheService
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
-            
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -87,6 +86,7 @@ namespace SimplegRPCCacheService
             {
                 try
                 {
+                    #region List all keys on server and get one randomly and delete it 
                     var cacheKeys = cacherClientProxy.ListKeys("");
                     cacheKeys = cacheKeys.OrderBy(x => Random.Shared.Next(cacheKeys.Length))
                         .ToArray();
@@ -100,10 +100,14 @@ namespace SimplegRPCCacheService
                         cacherClientProxy.RemoveKey(cacheKey);
                         break;
                     }
+                    #endregion
                     
+                    #region Create a new (key,value) and send it to the server
                     keyId = (keyId + 1) % 1000000;
-                    var (newCachekey,newCacheValue) = ($"{keyPrefix}/{keyId.ToString("000000",CultureInfo.InvariantCulture)}", DateTime.Now.ToString(CultureInfo.InvariantCulture));
-                    cacherClientProxy.SetKey(newCachekey, newCacheValue);
+                    var (newCacheKey,newCacheValue) = ($"{keyPrefix}/{keyId.ToString("000000",CultureInfo.InvariantCulture)}", DateTime.Now.ToString(CultureInfo.InvariantCulture));
+                    cacherClientProxy.SetKey(newCacheKey, newCacheValue);
+                    #endregion
+                    
                     await Task.Delay(1000, stoppingToken);
 
                 }
@@ -116,7 +120,6 @@ namespace SimplegRPCCacheService
             }
 
             _logger.LogInformation("TestBackgrounder ended");
-
         }
     }
 }
