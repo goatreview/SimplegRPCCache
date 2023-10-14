@@ -8,6 +8,14 @@ service Cacher {
 	rpc GetKey (GetKeyRequest) returns (GetKeyResponse) {}
 	rpc SetKey (SetKeyRequest) returns (SetKeyResponse) {}
 	rpc ListKeys (ListKeyRequest) returns (ListKeyResponse) {}
+	rpc CommandServerStream(ClientRequest) returns (stream CommandServerStreamResponse) {}
+}
+
+enum ServerRequest {
+	GRACE_FULL_SHUTDOWN = 0;
+	FORCE_FLUSH_CACHE = 1;
+	GET_KEY = 2;
+	RESET_CACHE = 3;
 }
 
 message GetKeyRequest {
@@ -36,4 +44,15 @@ message ListKeyRequest {
 
 message ListKeyResponse {
 	repeated string keys = 1;
+}
+
+message ClientRequest {
+	string hostname = 1;	
+	string ip = 2;	
+}
+
+message CommandServerStreamResponse {
+	ServerRequest server_request = 1;
+	optional string correlation_id = 2;
+	optional string key = 3;
 }

@@ -1,5 +1,6 @@
 ﻿using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
+using SimplegRPCCacheService.Client;
 using SimplegRPCCacheService.Services;
 
 namespace SimplegRPCCacheService
@@ -15,7 +16,7 @@ namespace SimplegRPCCacheService
                 configureOptions.MaxSendMessageSize = 32 * 1024 * 1024; // 32 MB
             });
             services.AddTransient<CacherClientProxy>();
-            services.AddHostedService<TestBackgrounder>();
+            services.AddHostedService<TestClientBackgrounder>();
             //services.AddTransient<Cacher.CacherClient>(provider =>
             //    {
             //        var channel = GrpcChannel.ForAddress("http://simplegrpccacheservice:8080", new GrpcChannelOptions()
