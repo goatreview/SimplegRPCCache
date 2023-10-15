@@ -7,7 +7,7 @@ namespace SimplegRPCCacheService.Server
     public class TestServerBackgrounder : BackgroundService
     {
         private readonly ILogger<TestServerBackgrounder> _logger;
-        private readonly ICacherService _cacherService;
+        private readonly CacherService _cacherService;
 
         public TestServerBackgrounder(ILogger<TestServerBackgrounder> logger, CacherService cacherService)
         {
@@ -20,10 +20,13 @@ namespace SimplegRPCCacheService.Server
             _logger.LogInformation("TestBackgrounder started");
             while (!stoppingToken.IsCancellationRequested)
             {
-                await _cacherService.BroadCastCommandAsync(new CommandServerStreamResponse()
+                var results  = await _cacherService.BroadCastCommandAsync(new CommandRequest()
                 {
-                    ServerRequest = ServerRequest.ForceFlushCache
-                });
+                    ServerTimestamp =  Google.Protobuf.WellKnownTypes.Timestamp.FromDateTime(DateTime.UtcNow),
+                    CommandType = CommandType.Idle
+                }, stoppingToken);
+
+                _logger.LogInformation($"TestBackgrounder: Idle results={string.Join(",",results.Select(x=>x.ClientId))}");
                 await Task.Delay(1000, stoppingToken);
             }
             _logger.LogInformation("TestBackgrounder stopped");

@@ -13,10 +13,10 @@ services:
       dockerfile: SimplegRPCCacheService/Dockerfile
     depends_on:
         - simplegrpccacheservice
-  # simplegrpccacheclient2:
-  #   image: ${DOCKER_REGISTRY-}simplegrpccacheservice
-  #   build:
-  #     context: .
-  #     dockerfile: SimplegRPCCacheService/Dockerfile      
-  #   depends_on:
-  #       - simplegrpccacheservice
+  simplegrpccacheclient2:
+    image: ${DOCKER_REGISTRY-}simplegrpccacheservice
+    build:
+      context: .
+      dockerfile: SimplegRPCCacheService/Dockerfile      
+    depends_on:
+        - simplegrpccacheservice

@@ -12,15 +12,10 @@ namespace SimplegRPCCacheService.Client
         {
             _cacherClient = cacherClient;
         }
-
-        public AsyncServerStreamingCall<CommandServerStreamResponse> CommandServerStream(CancellationToken cancellationToken = default)
+        
+        public AsyncDuplexStreamingCall<SimplegRPCCacheService.CommandResponse, SimplegRPCCacheService.CommandRequest> ExchangeCommands(CancellationToken cancellationToken = default)
         {
-            var clientRequest = new ClientRequest()
-            {
-                Hostname = Dns.GetHostName(),
-                Ip = Dns.GetHostAddresses(Dns.GetHostName()).First().ToString()
-            };
-            return _cacherClient.CommandServerStream(clientRequest,cancellationToken: cancellationToken);
+            return _cacherClient.ExchangeCommands(cancellationToken: cancellationToken);
         }
 
         public void RemoveKey(string key)

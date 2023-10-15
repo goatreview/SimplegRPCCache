@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 option csharp_namespace = "SimplegRPCCacheService";
 
 package simplecache;
@@ -8,14 +10,7 @@ service Cacher {
 	rpc GetKey (GetKeyRequest) returns (GetKeyResponse) {}
 	rpc SetKey (SetKeyRequest) returns (SetKeyResponse) {}
 	rpc ListKeys (ListKeyRequest) returns (ListKeyResponse) {}
-	rpc CommandServerStream(ClientRequest) returns (stream CommandServerStreamResponse) {}
-}
-
-enum ServerRequest {
-	GRACE_FULL_SHUTDOWN = 0;
-	FORCE_FLUSH_CACHE = 1;
-	GET_KEY = 2;
-	RESET_CACHE = 3;
+	rpc ExchangeCommands(stream CommandResponse) returns (stream CommandRequest);
 }
 
 message GetKeyRequest {
@@ -46,13 +41,33 @@ message ListKeyResponse {
 	repeated string keys = 1;
 }
 
-message ClientRequest {
-	string hostname = 1;	
-	string ip = 2;	
+enum CommandType {
+	IDLE = 0;
+	GRACE_FULL_SHUTDOWN = 1;
+	FORCE_FLUSH_CACHE = 2;
+	GET_KEY = 3;
+	SET_KEY = 4;
 }
 
-message CommandServerStreamResponse {
-	ServerRequest server_request = 1;
-	optional string correlation_id = 2;
-	optional string key = 3;
+enum CommandResult {
+	SUCCESS = 0;
+	ERROR = 1;
+	NOT_FOUND = 2;
+}
+
+message CommandRequest {
+	google.protobuf.Timestamp server_timestamp = 1;
+	CommandType command_type = 2;
+	
+	string key = 3;  // optional
+	bytes key_value = 4;  // optional
+}
+
+message CommandResponse {
+	CommandResult result = 1;
+	
+	string error_message = 2;  // optional
+	bytes key_value = 3;  // optional for GET_KEY
+	string client_id = 4;  // optional for IDLE
+	string client_stats = 5;  // optional for IDLE
 }

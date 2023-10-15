@@ -1,5 +1,8 @@
-﻿using System.Globalization;
+﻿using Grpc.Core;
+using System.Globalization;
 using System.Net;
+using System.Net.Sockets;
+using Google.Protobuf;
 
 namespace SimplegRPCCacheService.Client
 {
@@ -14,29 +17,121 @@ namespace SimplegRPCCacheService.Client
             _serviceProvider = serviceProvider;
         }
 
+        private bool SetKeyInLocalCache(string key, byte[] bytes)
+        {
+            throw new NotImplementedException();
+            //var cacherClientProxy = _serviceProvider.GetRequiredService<CacherClientProxy>();
+            //cacherClientProxy.SetKey(key, value);
+            //return true;
+        }
+
+        private (bool, byte[]) GetKeyFromLocalCache(string key)
+        {
+            throw new NotImplementedException();
+            //var cacherClientProxy = _serviceProvider.GetRequiredService<CacherClientProxy>();
+            //return cacherClientProxy.GetKey(key);
+        }
+
+        private bool ForceFlushCache()
+        {
+            throw new NotImplementedException();
+            //var cacherClientProxy = _serviceProvider.GetRequiredService<CacherClientProxy>();
+            //return cacherClientProxy.ForceFlushCache();
+        }
+
+        private IEnumerable<string> GetCurrentIpAddresses()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            return host.AddressList.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
+                .Select(ip => ip.ToString());
+        }
+        private (string ClientId,string ClientStats) Idle()
+        {
+            var clientStats = $"timestamp={DateTime.UtcNow.ToLongDateString()}";            
+            return ($"{Dns.GetHostName()}@{string.Join(",", GetCurrentIpAddresses())}", clientStats);
+        }
+
+        private void GraceFullShutdown()
+        {
+            throw new NotImplementedException();
+        }
+
         private async Task ExecuteAsync(IServiceProvider serviceProvider, CancellationToken stoppingToken)
         {
             _logger.LogInformation("StartServerStreamAsync started");
             try
             {
                 CacherClientProxy cacherClientProxy = serviceProvider.GetRequiredService<CacherClientProxy>();
-                using var serverStreamResponse = cacherClientProxy.CommandServerStream(stoppingToken);
-                while (await serverStreamResponse.ResponseStream.MoveNext(stoppingToken))
+                using var call = cacherClientProxy.ExchangeCommands(stoppingToken);
+                while (await call.ResponseStream.MoveNext(stoppingToken))
                 {
-                    var commandServerStreamResponse = serverStreamResponse.ResponseStream.Current;
-                    var serverRequest = commandServerStreamResponse.ServerRequest;
-                    _logger.LogInformation($"CommandServerStream() command={serverRequest}");
-                    switch (serverRequest)
+                    var command = call.ResponseStream.Current;
+                    switch (command.CommandType)
                     {
-                        case ServerRequest.GetKey:
+                        case CommandType.SetKey:
+                            var setResult = SetKeyInLocalCache(command.Key, command.KeyValue.ToByteArray());
+                            if (setResult)
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse { Result = CommandResult.Success }, stoppingToken);
+                            }
+                            else
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse
+                                        { Result = CommandResult.Error, ErrorMessage = "Failed to set key" },
+                                    stoppingToken);
+                            }
                             break;
-                        case ServerRequest.GraceFullShutdown:
+
+                        case CommandType.GetKey:
+                            var (notFound,getValue) = GetKeyFromLocalCache(command.Key);
+                            if (notFound)
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse
+                                        { Result = CommandResult.NotFound, KeyValue = ByteString.Empty },
+                                    stoppingToken);
+                            }
+                            else
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse
+                                        { Result = CommandResult.Success, KeyValue = ByteString.CopyFrom(getValue) },
+                                    stoppingToken);
+                            }
+                            break;
+
+                        case CommandType.ForceFlushCache:
+                            var flushResult = ForceFlushCache();
+                            if (flushResult)
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse { Result = CommandResult.Success }, stoppingToken);
+                            }
+                            else
+                            {
+                                await call.RequestStream.WriteAsync(
+                                    new CommandResponse
+                                        { Result = CommandResult.Error, ErrorMessage = "Failed to flush cache" },
+                                    stoppingToken);
+                            }
+                            break;
+                        
+                        case CommandType.Idle:
+                            var (clientId,clientStats) = Idle();
+                            await call.RequestStream.WriteAsync(
+                                new CommandResponse
+                                    { Result = CommandResult.Success, ClientId = clientId, ClientStats = clientStats },
+                                stoppingToken);
+                            break;
+
+                        case CommandType.GraceFullShutdown:
+                            GraceFullShutdown();
+                            await call.RequestStream.WriteAsync(new CommandResponse { Result = CommandResult.Success },
+                                stoppingToken);
+                            await call.RequestStream.CompleteAsync();
                             return;
-                        case ServerRequest.ForceFlushCache:
-                            //TODO
-                            break;
-                        case ServerRequest.ResetCache:
-                            break;
                     }
                 }
             }
@@ -47,8 +142,6 @@ namespace SimplegRPCCacheService.Client
         }
         private Task StartServerStreamAsync(IServiceProvider serviceProvider, CancellationToken stoppingToken)
         {
-
-            //return Task.CompletedTask;
             return Task.Factory.StartNew(async () => await ExecuteAsync(serviceProvider, stoppingToken), stoppingToken,TaskCreationOptions.RunContinuationsAsynchronously,TaskScheduler.Default);
         }
 
