@@ -45,6 +45,7 @@ namespace SimplegRPCCacheService.Client
             return host.AddressList.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
                 .Select(ip => ip.ToString());
         }
+
         private (string ClientId,string ClientStats) Idle()
         {
             var clientStats = $"timestamp={DateTime.UtcNow.ToLongDateString()}";            
